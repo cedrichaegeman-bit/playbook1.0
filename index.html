@@ -876,17 +876,12 @@ function getWbPlays(sheet){
 // Calculate how many rows fit in a venster (70mm height, ~2.646px/mm)
 // Header ~10px, each row ~12px -> max rows = floor((70*2.646 - 10) / 12)
 // 2 kolommen per venster: elk kolom max 14 rijen -> 28 plays per venster
-const MAX_VENSTERS = 3; // maximaal 3 vensters
-let MAX_ROWS_PER_COL = 12; // dynamisch aangepast op basis van plays
-let MAX_PER_VENSTER  = MAX_ROWS_PER_COL * 2;
+// Wristband: altijd max 3 vensters, plays gelijk verdeeld
+const MAX_VENSTERS = 3;
 
-function calcMaxRows(totalPlays){
-  // Bereken hoeveel rijen per kolom nodig zijn zodat ALLE plays passen in max 3 vensters
-  // Elke venster heeft 2 kolommen -> max 3 vensters = 6 kolommen totaal
-  // Rijen per kolom = ceil(totalPlays / 6)
-  const rowsPerCol = Math.ceil(totalPlays / (MAX_VENSTERS * 2));
-  // Minimaal 8, maximaal 20 rijen per kolom
-  return Math.min(20, Math.max(8, rowsPerCol));
+function getPlaysPerVenster(totalPlays){
+  // Verdeel alle plays gelijk over max 3 vensters
+  return Math.ceil(totalPlays / MAX_VENSTERS);
 }
 
 function buildVensterHTML(plays, sheet, label, forPrint){
@@ -947,13 +942,11 @@ function renderWristband(){
     return;
   }
 
-  // Dynamisch aanpassen: alle plays passen in max 3 vensters
-  MAX_ROWS_PER_COL = calcMaxRows(allPlays.length);
-  MAX_PER_VENSTER  = MAX_ROWS_PER_COL * 2;
-
+  // Verdeel alle plays gelijk over max 3 vensters
+  const playsPerVenster = getPlaysPerVenster(allPlays.length);
   const vensterPlays=[];
-  for(let i=0;i<allPlays.length;i+=MAX_PER_VENSTER){
-    vensterPlays.push(allPlays.slice(i,i+MAX_PER_VENSTER));
+  for(let i=0;i<allPlays.length;i+=playsPerVenster){
+    vensterPlays.push(allPlays.slice(i,i+playsPerVenster));
   }
 
   let html='<div id="wb-content" style="display:flex;gap:12px;flex-wrap:wrap">';
@@ -967,7 +960,7 @@ function renderWristband(){
   const nv=vensterPlays.length;
   const oldInfo=document.getElementById('wb-info'); if(oldInfo) oldInfo.remove();
   document.getElementById('wb-preview').insertAdjacentHTML('afterend',
-    `<div id="wb-info" style="font-size:10px;color:#78909c;margin-top:6px">${total} plays · ${nv} venster${nv>1?'s':''} · 2 kolommen · max ${MAX_ROWS_PER_COL*2} per venster · lettertype past automatisch</div>`
+    `<div id="wb-info" style="font-size:10px;color:#78909c;margin-top:6px">${total} plays · ${nv} venster${nv>1?'s':''} · 2 kolommen · max ${playsPerVenster} per venster · lettertype past automatisch</div>`
   );
 }
 
@@ -979,13 +972,11 @@ function printWristband(){
   const allPlays=getWbPlays(sheet);
   if(!allPlays.length){ alert('Geen plays toegewezen aan deze sheet.'); return; }
 
-  // Dynamisch: alle plays in max 3 vensters
-  MAX_ROWS_PER_COL = calcMaxRows(allPlays.length);
-  MAX_PER_VENSTER  = MAX_ROWS_PER_COL * 2;
-
+  // Verdeel alle plays gelijk over max 3 vensters
+  const playsPerVenster = getPlaysPerVenster(allPlays.length);
   const vensterPlays=[];
-  for(let i=0;i<allPlays.length;i+=MAX_PER_VENSTER){
-    vensterPlays.push(allPlays.slice(i,i+MAX_PER_VENSTER));
+  for(let i=0;i<allPlays.length;i+=playsPerVenster){
+    vensterPlays.push(allPlays.slice(i,i+playsPerVenster));
   }
 
   let vensters='';
