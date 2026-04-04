@@ -881,11 +881,12 @@ let MAX_ROWS_PER_COL = 12; // dynamisch aangepast op basis van plays
 let MAX_PER_VENSTER  = MAX_ROWS_PER_COL * 2;
 
 function calcMaxRows(totalPlays){
-  // Verdeel plays over max 3 vensters, bereken benodigde rijen per kolom
-  const playsPerVenster = Math.ceil(totalPlays / MAX_VENSTERS);
-  const rowsPerCol = Math.ceil(playsPerVenster / 2);
-  // Minimaal 8, maximaal 16 rijen per kolom
-  return Math.min(16, Math.max(8, rowsPerCol));
+  // Bereken hoeveel rijen per kolom nodig zijn zodat ALLE plays passen in max 3 vensters
+  // Elke venster heeft 2 kolommen -> max 3 vensters = 6 kolommen totaal
+  // Rijen per kolom = ceil(totalPlays / 6)
+  const rowsPerCol = Math.ceil(totalPlays / (MAX_VENSTERS * 2));
+  // Minimaal 8, maximaal 20 rijen per kolom
+  return Math.min(20, Math.max(8, rowsPerCol));
 }
 
 function buildVensterHTML(plays, sheet, label, forPrint){
