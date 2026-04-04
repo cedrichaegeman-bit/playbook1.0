@@ -892,12 +892,14 @@ function calcMaxRows(totalPlays){
 function buildVensterHTML(plays, sheet, label, forPrint){
   if(!plays.length) return '';
 
-  // Dynamic: font and padding scale with actual number of plays
-  // Venster 120x65mm, padding 2mm each side -> usable 61mm height, 49.5mm name width
-  // Max font from longest possible name (51 chars): ~6.7px
-  const actualRows = Math.min(MAX_ROWS_PER_COL, Math.ceil(plays.length / 2));
-  const rowHmm = 61 / actualRows;
-  const fontMm = Math.min(rowHmm * 0.62, 1.765); // cap at 6.7px (51-char limit)
+  // Splits plays in 2 gelijke kolommen
+  const nRows = Math.ceil(plays.length / 2);
+  const col1plays = plays.slice(0, nRows);
+  const col2plays = plays.slice(nRows);
+
+  // Font dynamisch op basis van aantal rijen
+  const rowHmm = 61 / nRows;
+  const fontMm = Math.min(rowHmm * 0.62, 1.765);
   const fontPx = (fontMm * 3.7795).toFixed(1);
   const numPx  = Math.max(5.5, fontMm * 0.82 * 3.7795).toFixed(1);
   const padVmm = Math.max(0.3, (rowHmm - fontMm) / 2).toFixed(2);
@@ -907,32 +909,24 @@ function buildVensterHTML(plays, sheet, label, forPrint){
   const pad    = forPrint ? `${padVmm}mm 1mm` : '2px 3px';
   const numW   = forPrint ? '7mm' : '20px';
 
-  const col1plays = plays.slice(0, actualRows);
-  const col2plays = plays.slice(actualRows);
-
   function buildCol(colPlays, offset){
     let rows = '';
-    for(let i = 0; i < actualRows; i++){
-      const p = colPlays[i];
+    colPlays.forEach((p, i) => {
       const isEven = (offset + i) % 2 === 1;
       const rowCls  = forPrint ? (isEven ? 'even-row' : 'odd-row') : '';
       const bgStyle = forPrint ? '' : `background:${isEven?'#e8e8e8':'#ffffff'};`;
-      if(p){
-        rows += `<tr class="${rowCls}" style="${bgStyle}">
-          <td class="${forPrint?'num-cell':''}" style="font-weight:700;font-size:${numSz};color:#0d47a1;border:0.5px solid #90caf9;padding:${pad};text-align:center;white-space:nowrap;border-right:1px solid #1565c0;width:${numW}">#${p.id}</td>
-          <td style="font-size:${nameSz};color:#0d47a1;border:0.5px solid #90caf9;padding:${pad};line-height:1.2;white-space:nowrap">${p.name}</td>
-        </tr>`;
-      } else {
-        // No empty rows — grid fits actual plays only
-      }
-    }
+      rows += `<tr class="${rowCls}" style="${bgStyle}">
+        <td class="${forPrint?'num-cell':''}" style="font-weight:700;font-size:${numSz};color:#0d47a1;border:0.5px solid #90caf9;padding:${pad};text-align:center;white-space:nowrap;border-right:1px solid #1565c0;width:${numW}">#${p.id}</td>
+        <td style="font-size:${nameSz};color:#0d47a1;border:0.5px solid #90caf9;padding:${pad};line-height:1.2;white-space:nowrap">${p.name}</td>
+      </tr>`;
+    });
     return `<table style="width:100%;border-collapse:collapse;border:0.5px solid #1565c0;flex:1">${rows}</table>`;
   }
 
   const gap = forPrint ? '2mm' : '6px';
   const colsHtml = `<div style="display:flex;gap:${gap};align-items:flex-start">
     ${buildCol(col1plays, 0)}
-    ${buildCol(col2plays, MAX_ROWS_PER_COL)}
+    ${buildCol(col2plays, nRows)}
   </div>`;
 
   const header = `${sheet.name}${sheet.opponent ? ' — '+sheet.opponent : ''} · ${label}`;
