@@ -965,38 +965,24 @@ function renderWristband(){
 }
 
 function printWristband(){
-  const el=document.getElementById('wb-content');
-  if(!el){ alert('Geen wristband om te printen. Wijs eerst plays toe aan een sheet.'); return; }
-  const idx=parseInt(document.getElementById('wb-sheet-sel').value);
-  const sheet=sheets[idx];
-  const allPlays=getWbPlays(sheet);
-  if(!allPlays.length){ alert('Geen plays toegewezen aan deze sheet.'); return; }
+  const wbContent = document.getElementById('wb-content');
+  if(!wbContent){ alert('Geen wristband om te printen. Wijs eerst plays toe aan een sheet.'); return; }
 
-  // Verdeel alle plays gelijk over max 3 vensters
-  const playsPerVenster = getPlaysPerVenster(allPlays.length);
-  const vensterPlays=[];
-  for(let i=0;i<allPlays.length;i+=playsPerVenster){
-    vensterPlays.push(allPlays.slice(i,i+playsPerVenster));
-  }
-
-  let vensters='';
-  vensterPlays.forEach((chunk,i)=>{
-    vensters+=buildVensterHTML(chunk, sheet, `Venster ${i+1}`, true);
-  });
+  // Gebruik exact de HTML die al op het scherm staat
+  // Voeg print-specifieke stijlen toe maar verander de inhoud niet
+  const html = wbContent.innerHTML;
 
   printViaIframe(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Wristband</title>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,sans-serif;padding:5mm;display:flex;flex-wrap:wrap;gap:6mm;align-items:flex-start;justify-content:flex-start;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}
-    .venster{width:120mm;height:65mm;border:1.5px solid #1a237e;border-radius:2px;padding:2mm;overflow:hidden;flex-shrink:0;break-inside:avoid}
-    .vh{font-size:6px;font-weight:700;text-transform:uppercase;color:#0d47a1;border-bottom:1px solid #1a237e;padding-bottom:1mm;margin-bottom:1mm}
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
+    body{font-family:Arial,sans-serif;padding:5mm;display:flex;flex-wrap:wrap;gap:6mm;align-items:flex-start}
+    .wb-venster{width:120mm;border:1.5px solid #1a237e;border-radius:2px;padding:2mm;flex-shrink:0;break-inside:avoid}
+    .wb-venster-header{font-size:6px;font-weight:700;text-transform:uppercase;color:#0d47a1;border-bottom:1px solid #1a237e;padding-bottom:1mm;margin-bottom:1mm}
     table{border-collapse:collapse;width:100%}
-    td{-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;border:0.5px solid #90caf9;padding:1px 3px;font-size:6.5px;color:#0d47a1;line-height:1.3}
-    .odd-row{background:#ffffff !important}
-    .even-row{background:#e8e8e8 !important}
-    .num-cell{font-weight:700;font-size:7px;text-align:center;width:20px;border-right:1px solid #1565c0 !important}
+    tr{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+    td{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
     @page{margin:3mm;size:A4 landscape}
-  </style></head><body>${vensters}</body></html>`);
+  </style></head><body><div style="display:flex;flex-wrap:wrap;gap:6mm;align-items:flex-start">${html}</div></body></html>`);
 }
 
 
