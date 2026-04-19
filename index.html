@@ -84,7 +84,9 @@ td{padding:6px 9px;border-bottom:1px solid #e8edf5;vertical-align:middle}
 .sit-card.cx .sit-title{color:#1A237E}
 .sit-count{font-size:10px;color:#90a4ae;margin-left:8px;font-weight:400}
 .plays-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px;margin-bottom:8px}
-.ppill{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f8f8f8;border:1px solid #dde3ec;border-radius:6px;font-size:11px}
+.ppill{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f8f8f8;border:1px solid #dde3ec;border-radius:6px;font-size:11px;cursor:grab;user-select:none;-webkit-user-select:none}
+.ppill.dragging{opacity:.4;cursor:grabbing}
+.ppill.drag-over{border:2px solid #1565c0;background:#e8f0fe}
 .ppill .pnum{font-weight:700;min-width:28px;color:#333;font-size:11px;flex-shrink:0}
 .ppill .pname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .add-row{display:flex;gap:6px;align-items:flex-start}
@@ -640,14 +642,20 @@ function renderCallSheet(){
       </div>
       <div class="plays-grid" id="pg-${sk(sit)}">
         ${assigned.map(p=>`
-          <div class="ppill">
+          <div class="ppill" draggable="true" data-id="${p.id}"
+            ondragstart="dragStart(event,this)"
+            ondragover="dragOver(event)"
+            ondragleave="dragLeave(event)"
+            ondrop="dragDrop(event,this,'${sit.replace(/'/g,"\\'")}')"
+            ondragend="dragEnd(event)">
+            <span style="cursor:grab;color:#aaa;margin-right:2px;font-size:13px">⠿</span>
             <span class="pnum">#${p.id}</span>
             <span class="pname">${p.name}</span>
             <button class="btn danger xs" onclick="removeFromSit('${sit.replace(/'/g,"\\'")}',${p.id})" style="flex-shrink:0">✕</button>
           </div>`).join('')}
       </div>
       <div class="add-row">
-        <select id="sel-${sk(sit)}" multiple size="4" style="flex:1;font-size:11px;border-radius:6px;border:1px solid #c8d4e0;padding:3px">
+        <select id="sel-${sk(sit)}" multiple size="10" style="flex:1;font-size:11px;border-radius:6px;border:1px solid #c8d4e0;padding:3px;min-height:120px">
           ${available.map(p=>`<option value="${p.id}">#${p.id} — ${p.name}</option>`).join('')}
         </select>
         <div class="add-row-btns">
@@ -676,6 +684,51 @@ function selectAllInSit(sit, selectAll){
   const sel=document.getElementById('sel-'+sk(sit));
   if(!sel) return;
   [...sel.options].forEach(o=>o.selected=selectAll);
+}
+
+// ── DRAG & DROP ───────────────────────────────────────────
+let dragSrcId = null;
+let dragSrcSit = null;
+
+function dragStart(e, el){
+  dragSrcId  = parseInt(el.dataset.id);
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function dragOver(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+
+function dragLeave(e){
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function dragDrop(e, el, sit){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const targetId = parseInt(el.dataset.id);
+  if(!dragSrcId || dragSrcId === targetId) return;
+
+  const s = sheets[activeSheet];
+  const arr = s.situations[sit];
+  if(!arr) return;
+  const fromIdx = arr.indexOf(dragSrcId);
+  const toIdx   = arr.indexOf(targetId);
+  if(fromIdx === -1 || toIdx === -1) return;
+
+  arr.splice(fromIdx, 1);
+  arr.splice(toIdx, 0, dragSrcId);
+
+  renderCallSheet();
+  triggerAutoSave();
+}
+
+function dragEnd(e){
+  e.currentTarget.classList.remove('dragging');
+  dragSrcId  = null;
 }
 
 function removeFromSit(sit,pid){
