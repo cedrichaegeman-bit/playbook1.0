@@ -383,6 +383,12 @@ td{padding:6px 9px;border-bottom:1px solid #e8edf5;vertical-align:middle}
     </div>
     <button class="btn primary" onclick="printWristband()">Print wristband</button>
     <button class="btn" onclick="exportWristbandXlsx()">Export naar Excel</button>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="font-size:11px;color:#78909c">Lettertype print:</span>
+      <button class="btn xs" onclick="changePrintFont(-0.5)" style="padding:2px 8px;font-size:12px;font-weight:700">−</button>
+      <span id="wb-font-size-display" style="font-size:11px;font-weight:600;color:#1565c0;min-width:32px;text-align:center">5.5px</span>
+      <button class="btn xs" onclick="changePrintFont(0.5)" style="padding:2px 8px;font-size:12px;font-weight:700">+</button>
+    </div>
     <span style="font-size:11px;color:#78909c;align-self:center">3 vensters van 12×7 cm · A4 liggend · numerieke volgorde</span>
   </div>
   <div class="wb-outer">
@@ -686,6 +692,15 @@ function selectAllInSit(sit, selectAll){
   [...sel.options].forEach(o=>o.selected=selectAll);
 }
 
+// ── WRISTBAND FONT SIZE ───────────────────────────────────
+let wbPrintFontSize = 5.5;
+
+function changePrintFont(delta){
+  wbPrintFontSize = Math.round((wbPrintFontSize + delta) * 10) / 10;
+  wbPrintFontSize = Math.max(3.0, Math.min(9.0, wbPrintFontSize));
+  document.getElementById('wb-font-size-display').textContent = wbPrintFontSize + 'px';
+}
+
 // ── DRAG & DROP ───────────────────────────────────────────
 let dragSrcId = null;
 let dragSrcSit = null;
@@ -947,15 +962,15 @@ function buildVensterHTML(plays, sheet, label, forPrint){
 
   // Font dynamisch op basis van aantal rijen
   const rowHmm = 61 / nRows;
-  const fontMm = Math.min(rowHmm * 0.62, 1.765);
-  const fontPx = (fontMm * 3.7795).toFixed(1);
-  const numPx  = Math.max(5.5, fontMm * 0.82 * 3.7795).toFixed(1);
-  const padVmm = Math.max(0.3, (rowHmm - fontMm) / 2).toFixed(2);
+  // Font 5.5px — garandeert dat zelfs 51-char namen passen in 49.5mm
+  const fontPx = '5.5';
+  const numPx  = '5.5';
+  const padVmm = Math.max(0.2, (rowHmm - 1.45) / 2).toFixed(2);
 
   const numSz  = forPrint ? `${numPx}px`  : '7px';
   const nameSz = forPrint ? `${fontPx}px` : '7.5px';
-  const pad    = forPrint ? `${padVmm}mm 1mm` : '2px 3px';
-  const numW   = forPrint ? '7mm' : '20px';
+  const pad    = forPrint ? `${padVmm}mm 0.8mm` : '2px 3px';
+  const numW   = forPrint ? '5.5mm' : '20px';
 
   function buildCol(colPlays, offset){
     let rows = '';
@@ -965,10 +980,10 @@ function buildVensterHTML(plays, sheet, label, forPrint){
       const bgStyle = forPrint ? '' : `background:${isEven?'#e8e8e8':'#ffffff'};`;
       rows += `<tr class="${rowCls}" style="${bgStyle}">
         <td class="${forPrint?'num-cell':''}" style="font-weight:700;font-size:${numSz};color:#0d47a1;border:0.5px solid #90caf9;padding:${pad};text-align:center;white-space:nowrap;border-right:1px solid #1565c0;width:${numW}">#${p.id}</td>
-        <td style="font-size:${nameSz};color:#0d47a1;border:0.5px solid #90caf9;padding:${pad};line-height:1.2;white-space:nowrap">${p.name}</td>
+        <td style="font-size:${nameSz};color:#0d47a1;border:0.5px solid #90caf9;padding:${pad};line-height:1.2;white-space:nowrap;overflow:hidden">${p.name}</td>
       </tr>`;
     });
-    return `<table style="width:100%;border-collapse:collapse;border:0.5px solid #1565c0;flex:1">${rows}</table>`;
+    return `<table style="width:100%;border-collapse:collapse;border:0.5px solid #1565c0;flex:1;table-layout:fixed">${rows}</table>`;
   }
 
   const gap = forPrint ? '2mm' : '6px';
@@ -1012,8 +1027,11 @@ function renderWristband(){
   const total=allPlays.length;
   const nv=vensterPlays.length;
   const oldInfo=document.getElementById('wb-info'); if(oldInfo) oldInfo.remove();
+  const warnHtml = total > 90
+    ? `<span style="color:#e65100;font-weight:600;margin-left:8px">⚠ ${total} plays — tekst kan buiten de randen vallen bij het printen (max ~90 aanbevolen)</span>`
+    : '';
   document.getElementById('wb-preview').insertAdjacentHTML('afterend',
-    `<div id="wb-info" style="font-size:10px;color:#78909c;margin-top:6px">${total} plays · ${nv} venster${nv>1?'s':''} · 2 kolommen · max ${playsPerVenster} per venster · lettertype past automatisch</div>`
+    `<div id="wb-info" style="font-size:10px;color:#78909c;margin-top:6px">${total} plays · ${nv} venster${nv>1?'s':''} · 2 kolommen · max ${playsPerVenster} per venster${warnHtml}</div>`
   );
 }
 
@@ -1021,19 +1039,19 @@ function printWristband(){
   const wbContent = document.getElementById('wb-content');
   if(!wbContent){ alert('Geen wristband om te printen. Wijs eerst plays toe aan een sheet.'); return; }
 
-  // Gebruik exact de HTML die al op het scherm staat
-  // Voeg print-specifieke stijlen toe maar verander de inhoud niet
+  // Gebruik de scherm HTML - bewezen werkende versie
   const html = wbContent.innerHTML;
 
   printViaIframe(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Wristband</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
     body{font-family:Arial,sans-serif;padding:5mm;display:flex;flex-wrap:wrap;gap:6mm;align-items:flex-start}
-    .wb-venster{width:120mm;border:1.5px solid #1a237e;border-radius:2px;padding:2mm;flex-shrink:0;break-inside:avoid}
+    .wb-venster{width:120mm;border:1.5px solid #1a237e;border-radius:2px;padding:2mm;flex-shrink:0;break-inside:avoid;overflow:hidden}
     .wb-venster-header{font-size:6px;font-weight:700;text-transform:uppercase;color:#0d47a1;border-bottom:1px solid #1a237e;padding-bottom:1mm;margin-bottom:1mm}
-    table{border-collapse:collapse;width:100%}
+    table{border-collapse:collapse;width:100%;table-layout:fixed}
     tr{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-    td{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+    td{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;overflow:hidden;white-space:nowrap;font-size:${wbPrintFontSize}px!important}
+    td:first-child{width:18px!important;font-size:${wbPrintFontSize}px!important}
     @page{margin:3mm;size:A4 landscape}
   </style></head><body><div style="display:flex;flex-wrap:wrap;gap:6mm;align-items:flex-start">${html}</div></body></html>`);
 }
